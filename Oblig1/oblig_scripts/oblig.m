@@ -132,6 +132,7 @@ EmGrowthY = zeros(size(misalign));
 %Phasespaces = figure()
 
 for (i=1:length(misalign))
+    
    setQuadMisalignments(misalign(i),misalign(i))
    
    runMADX;
@@ -170,7 +171,58 @@ legend(axs,'$D_x$','$D_y$','Interpreter','Latex','fontsize',15,'Location','best'
 title('Emittance growth - n= '+string(n),'Fontsize',18,'Interpreter','Latex');
 saveas(gcf,'../figures/growth_'+string(n),'jpg');
 
+%% Emittance growth with energy spread
+n = 1e5;
+setParticleNumber(n);
 
+n_points = 10;
+setEnergy(1.0);
+setEnergySpread(0.01);
+misalign = linspace(0,2e-3,n_points);
+EmGrowthX = zeros(size(misalign));
+EmGrowthY = zeros(size(misalign));
+
+%Phasespaces = figure()
+
+for (i=1:length(misalign))
+    
+   setQuadMisalignments(misalign(i),misalign(i))
+   
+   runMADX;
+   
+   Beam0 = getInitialBeam;
+   Beam1 = getFinalBeam;
+   
+   [ex0, ey0] = emittance(Beam0);
+   [ex1, ey1] = emittance(Beam1);
+   
+   EmGrowthX(i) = (ex1-ex0)/ex0;
+   EmGrowthY(i) = (ey1-ey0)/ey0; 
+   
+   clear ex0 ey0 ex1 ey1
+   
+   
+   %figure(Phasespaces)
+   %clf;
+   %subplot(2,2,1), plot(Beam0(:,1),Beam0(:,2),'r.')
+   %subplot(2,2,2), plot(Beam0(:,3),Beam0(:,4),'b.')
+   %subplot(2,2,3), plot(Beam1(:,1),Beam1(:,2),'r.')
+   %subplot(2,2,4), plot(Beam1(:,3),Beam1(:,4),'b.')
+   %hold on
+   %pause(0.01)
+   
+end
+
+fig4 = figure()
+plot(misalign,EmGrowthX,'Linestyle','--','Marker','none','linewidth',1.5)
+hold on
+plot(misalign,EmGrowthY,'Linestyle','-.','Marker','none','linewidth',1.5);
+grid on
+axs = gca;
+set(gca,'TickLabelInterpreter','latex','fontsize',11);
+legend(axs,'$D_x$','$D_y$','Interpreter','Latex','fontsize',15,'Location','best');
+title('Emittance growth - n= '+string(n),'Fontsize',18,'Interpreter','Latex');
+saveas(gcf,'../figures/growth_spread_'+string(n),'jpg');
 
 
 
