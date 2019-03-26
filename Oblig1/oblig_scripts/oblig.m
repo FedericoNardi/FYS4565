@@ -168,7 +168,7 @@ axs = gca;
 set(gca,'TickLabelInterpreter','latex','fontsize',11);
 legend(axs,'$D_x$','$D_y$','Interpreter','Latex','fontsize',15,'Location','best');
 title('Emittance growth - n= '+string(n),'Fontsize',18,'Interpreter','Latex');
-saveas(gcf,'../growth_'+string(n),'jpg');
+saveas(gcf,'../figures/growth_'+string(n),'jpg');
 
 
 
