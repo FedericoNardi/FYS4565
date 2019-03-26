@@ -1,0 +1,5 @@
+@ NAME %06s "PARAMS"
+@ TYPE %04s "USER"
+* N_PARTICLES ENERGY EMIT_NX EMIT_NY SIGMA_E QUAD_DX QUAD_DY BPM_DX BPM_DY K_QUAD DELTA_E
+$ %le %le %le %le %le %le %le %le %le %le %le
+ 2.00e+04 1.00e+00 1.00e-05 1.00e-05 0.00e+00 2.00e-03 2.00e-03 0.00e+00 0.00e+00 1.41e+00 5.00e-02

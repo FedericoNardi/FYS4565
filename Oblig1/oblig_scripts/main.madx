@@ -1,0 +1,176 @@
+OPTION, ECHO = FALSE, TWISS_PRINT = FALSE, INFO = FALSE;
+
+!=================================================
+! %  FYS4565/9565 Emittance Preservation Oblig % !
+!=================================================
+!                                                !
+!    Carl A. Lindstrom, Uni Oslo, 10.08.2015     !
+!    Erik Adli, Uni Oslo, 20.08.2015             !
+!                                                !
+!    ---------------------------------------     !
+!    Updated 05.03.2019                          !
+!    ---------------------------------------     !
+!                                                !
+!    Linac with 4 FODO cells. Each quad has a    !
+!    misalignment error, and a corresponding     !
+!    BPM and kicker to correct for it.           !
+!                                                !
+!    Run the script with the command :           !
+!    ./madx < main.madx                          !
+!                                                !
+!=================================================
+
+TITLE, "FYS4565/9565 Emittance Preservation Oblig";
+
+!=================================================
+!  IMPORT PARAMETERS FROM FILE
+!-------------------------------------------------
+READTABLE, FILE = params.tfs;
+
+// beam parameters
+n_particles = TABLE(params, N_PARTICLES); // number of particles
+p_energy    = TABLE(params, ENERGY);      // [GeV] beam energy
+emit_nx     = TABLE(params, EMIT_NX);     // [m rad] normalized x-emittance
+emit_ny     = TABLE(params, EMIT_NY);     // [m rad] normalized y-emittance
+sigma_E     = TABLE(params, SIGMA_E);     // relative energy spread
+sigma_z     = 10e-6;                      // [m] bunch length (irrelevant)
+
+// misalignment parameters
+quad_dx     = TABLE(params, QUAD_DX);     // [m] quad rms x-misalignment
+quad_dy     = TABLE(params, QUAD_DY);     // [m] quad rms y-misalignment
+bpm_dx      = TABLE(params, BPM_DX);      // [m] bpm rms x-misalignment
+bpm_dy      = TABLE(params, BPM_DY);      // [m] bpm rms y-misalignment
+rand_seed   = 1;                          // random error generator seed
+
+// accelerator lattice parameters
+k_quad      = TABLE(params, K_QUAD);      // [1/m] FODO magnet strength
+d_quad      = 1;                          // [m] (quadrupole separation)
+
+// dispersion-free steering parameters
+delta      = TABLE(params, DELTA_E);      // relative energy offset
+
+!=================================================
+!  IMPORT ACCELERATOR LATTICE
+!   Gives beam lines "fodo" and "linac". Kicker
+!   amplitudes have already been inserted from
+!   file.
+!-------------------------------------------------
+CALL, FILE = "linac.seq";
+
+!=================================================
+!  BEAM definition.
+!-------------------------------------------------
+BEAM, PARTICLE = ELECTRON, SIGT = sigma_z, SIGE = sigma_E, ENERGY = p_energy;
+
+!=================================================
+!  MATCHING
+!   Finding periodic betas using a single FODO
+!   cell. Save it to memory for later use.
+!-------------------------------------------------
+USE, SEQUENCE = fodo;
+SAVEBETA, LABEL = "initial", PLACE = #S;
+TWISS;
+
+!=================================================
+!  PRINT TWISS parameters.
+!-------------------------------------------------
+VALUE, initial->BETX, initial->BETY, initial->ALFX, initial->ALFY;
+
+!=================================================
+!  CALCULATING PHASE SPACE
+!   Assuming a beam centered at x = 0, y = 0.
+!-------------------------------------------------
+emit_x = emit_nx / (p_energy / 0.511e-3);
+emit_y = emit_ny / (p_energy / 0.511e-3);
+
+! DEBUG
+VALUE, emit_x, emit_y;
+!initial->BETX = 1;
+!initial->BETY = 1;
+!initial->ALFX = 10;
+!initial->ALFY = 10;
+
+gamx = (1 + (initial->ALFX)^2)/(initial->BETX);
+sigma_x = sqrt((initial->BETX) * emit_x);
+sigma_px = sqrt(gamx * emit_x);
+cor_xpx = - (initial->ALFX) / sqrt( 1 + (initial->ALFX)^2 );
+
+gamy = (1 + (initial->ALFY)^2)/(initial->BETY);
+sigma_y = sqrt((initial->BETY) * emit_y);
+sigma_py = sqrt(gamy * emit_y);
+cor_ypy = - (initial->ALFY) / sqrt( 1 + (initial->ALFY)^2 );
+
+!=================================================
+!  MISALIGNMENTs for all linac quads.
+!-------------------------------------------------
+USE, SEQUENCE = linac;
+EOPTION, SEED = rand_seed;
+SELECT, FLAG = ERROR, CLASS = MULTIPOLE;
+EALIGN, DX := quad_dx * GAUSS(), DY := quad_dy * GAUSS();
+ESAVE, FILE = "quadMisalignments.tfs";
+
+!=================================================
+!  MISALIGNMENTs for all BPMs.
+!-------------------------------------------------
+SELECT, FLAG = ERROR, CLEAR;
+SELECT, FLAG = ERROR, CLASS = MONITOR;
+EALIGN, DX := bpm_dx * GAUSS(), DY := bpm_dy * GAUSS();
+ESAVE, FILE = "bpmMisalignments.tfs";
+
+!=================================================
+!  PLOT MATCHED SOLUTION
+!   Includes both beta functions and dispersions
+!   due to alignment errors.
+!   Pro-tip: Comment these lines out (with a !)
+!            to speed up execution somewhat.
+!-------------------------------------------------
+
+SELECT,FLAG = TWISS, COLUMN=NAME, KEYWORD, S, BETX, BETY, ALFX, ALFY, DX, DY, DPX, DPY, emit_x, emit_y;
+TWISS, CHROM, BETA0 = initial, FILE = "twiss.tfs"
+TWISS, CHROM, BETA0 = initial;
+PLOT, TABLE = twiss, FILE = "plots", INTERPOLATE, COLOUR = 100, HAXIS = S, VAXIS = BETX, BETY;
+PLOT, TABLE = twiss, FILE = "plots", INTERPOLATE, COLOUR = 100, HAXIS = S, VAXIS = DX, DY;
+
+!=================================================
+!  TRACKING PARTICLES
+!   Since we are using thin elements (quads and
+!   kickers) it is possible to use MADX's own
+!   particle tracking module.
+!-------------------------------------------------
+TRACK, ONEPASS, ONETABLE, DUMP, FILE = "particles.", DELTAP = delta;
+
+    // add a lot of particles
+    // use Twiss parameters as calculated by matching (in TWISS).
+    i = 0;
+    WHILE (i < n_particles) {
+        X1 = GAUSS(); X2 = GAUSS(); // standard gaussians
+        Y1 = GAUSS(); Y2 = GAUSS(); // standard gaussians
+        START, // define bivariate normal distribution
+            X  = sigma_x  * X1,
+            PX = sigma_px * cor_xpx * X1 + sigma_px * sqrt(1-cor_xpx^2) * X2,
+            Y  = sigma_y  * Y1,
+            PY = sigma_py * cor_ypy * Y1 + sigma_py * sqrt(1-cor_ypy^2) * Y2,
+            T  = sigma_z  * GAUSS(),
+            PT = sigma_E  * GAUSS();
+        i = i + 1;
+    }
+
+    // manually add all bpms to record
+    OBSERVE, PLACE = bpm[1];
+    OBSERVE, PLACE = bpm[2];
+    OBSERVE, PLACE = bpm[3];
+    OBSERVE, PLACE = bpm[4];
+    OBSERVE, PLACE = bpm[5];
+    OBSERVE, PLACE = bpm[6];
+    OBSERVE, PLACE = bpm[7];
+    OBSERVE, PLACE = bpm[8];
+
+    // track trough linac once (not periodic)
+    RUN, TURNS = 1;
+
+ENDTRACK;
+
+!=================================================
+!  THE END :(
+!-------------------------------------------------
+STOP;

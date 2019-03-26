@@ -1,0 +1,53 @@
+!=================================================
+!                                                !
+!          LINAC BEAM LINE DEFINITION            !
+!          Defined to be 8 FODO cells            !
+!                                                !
+!=================================================
+
+!=================================================
+!  ELEMENT DEFINITIONS
+!-------------------------------------------------
+
+quad : MULTIPOLE, LRAD = 0;
+qf : quad, KNL := {0, +k_quad};
+qd : quad, KNL := {0, -k_quad};
+
+d_kick = d_quad/8;  // distance from quad to kicker
+d_bpm = d_quad/8;   // distance from bpm to next quad
+o : DRIFT, L = d_quad - d_kick - d_bpm;
+o_k : DRIFT, L = d_kick;
+o_b : DRIFT, L = d_bpm;
+
+kick : KICKER;
+
+bpm : MONITOR;
+
+!=================================================
+!  READ IN KICKER AMPLITUDES
+!-------------------------------------------------
+
+READTABLE, FILE = kickers.tfs;
+
+kick_1 : KICKER, HKICK = TABLE(kickers, XKICK, 1), VKICK = TABLE(kickers, YKICK, 1);
+kick_2 : KICKER, HKICK = TABLE(kickers, XKICK, 2), VKICK = TABLE(kickers, YKICK, 2);
+kick_3 : KICKER, HKICK = TABLE(kickers, XKICK, 3), VKICK = TABLE(kickers, YKICK, 3);
+kick_4 : KICKER, HKICK = TABLE(kickers, XKICK, 4), VKICK = TABLE(kickers, YKICK, 4);
+kick_5 : KICKER, HKICK = TABLE(kickers, XKICK, 5), VKICK = TABLE(kickers, YKICK, 5);
+kick_6 : KICKER, HKICK = TABLE(kickers, XKICK, 6), VKICK = TABLE(kickers, YKICK, 6);
+kick_7 : KICKER, HKICK = TABLE(kickers, XKICK, 7), VKICK = TABLE(kickers, YKICK, 7);
+kick_8 : KICKER, HKICK = TABLE(kickers, XKICK, 8), VKICK = TABLE(kickers, YKICK, 8);
+
+!=================================================
+!  LATTICES
+!-------------------------------------------------
+
+fodo : LINE = (qf, o_k, kick_1, o, bpm, o_b, qd, o_k, kick_2, o, bpm, o_b);
+
+// using 8 BPMs (1 for each quad)
+linac : LINE = (
+    qf, o_k, kick_1, o, bpm, o_b, qd, o_k, kick_2, o, bpm, o_b, 
+    qf, o_k, kick_3, o, bpm, o_b, qd, o_k, kick_4, o, bpm, o_b, 
+    qf, o_k, kick_5, o, bpm, o_b, qd, o_k, kick_6, o, bpm, o_b, 
+    qf, o_k, kick_7, o, bpm, o_b, qd, o_k, kick_8, o, bpm, o_b
+);
