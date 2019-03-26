@@ -43,7 +43,7 @@
 @ TITLE            %41s "FYS4565/9565 Emittance Preservation Oblig"
 @ ORIGIN           %16s "5.04.02 Linux 64"
 @ DATE             %08s "26/03/19"
-@ TIME             %08s "17.11.46"
+@ TIME             %08s "18.01.24"
 * NAME               KEYWORD                             S               BETX               BETY               ALFX               ALFY                 DX                 DY                DPX                DPY             EMIT_X             EMIT_Y 
 $ %s                 %s                                %le                %le                %le                %le                %le                %le                %le                %le                %le                %le                %le 
  "LINAC$START"       "MARKER"                             0        3.410060363        0.590010444       -2.404092556        0.415957363                  0                  0                  0                  0           5.11e-09           5.11e-09
