@@ -233,12 +233,13 @@ title('BPM orbit - kickers','Fontsize',18,'Interpreter','Latex');
 setBpmMisalignments(0.0,0.0);
 setEnergySpread(0.01);
 
+
 n_points = 10;
 misalign = linspace(0,2e-3,n_points);
 
+
 resetKickers;
 EmGrowthX0 = EmittanceGrowth(misalign,'none');
-resetKickers;
 EmGrowthX_c = EmittanceGrowth(misalign,'1to1');
 
 fig2 = figure();
